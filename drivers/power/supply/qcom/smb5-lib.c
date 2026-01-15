@@ -744,6 +744,9 @@ int smblib_set_charge_param(struct smb_charger *chg,
 	if (!chg->cp_psy)
 		chg->cp_psy = power_supply_get_by_name("bq2597x-standalone");
 
+	if (!chg->cp_psy)
+		chg->cp_psy = power_supply_get_by_name("ln8000");
+
 	if (chg->cp_psy && param->reg == CHGR_FLOAT_VOLTAGE_CFG_REG) {
 		power_supply_get_property(chg->cp_psy, POWER_SUPPLY_PROP_CP_VBAT_CALIBRATE, &val);
 		if (val.intval >= -20000 && val.intval <= 20000) {
@@ -913,6 +916,15 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 		enable = false;
 #endif
 
+	rc = power_supply_get_property(chg->usb_psy,
+				POWER_SUPPLY_PROP_PD_AUTHENTICATION, &pval);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get pd authentic:%d\n", rc);
+		return rc;
+	}
+	if (!pval.intval)
+		enable = false;
+
 	/*if soc > 90 do not set fastcharge flag*/
 	rc = power_supply_get_property(chg->bms_psy,
 			POWER_SUPPLY_PROP_CAPACITY, &pval);
@@ -922,11 +934,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 	}
 
 	if (chg->use_bq_pump)
-#ifdef CONFIG_K6_CHARGE
-		fastcharge_soc_thr = 85;
-#else
 		fastcharge_soc_thr = 95;
-#endif
 	else
 		fastcharge_soc_thr = 90;
 
@@ -959,6 +967,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 	if (enable) {
 		/* ffc need clear 4.4V non_fcc_vfloat_voter first */
 		vote(chg->fv_votable, NON_FFC_VFLOAT_VOTER, false, 0);
+		vote(chg->fcc_votable, PD_UNVERIFED_VOTER, false, 0);
 		rc = power_supply_get_property(chg->bms_psy,
 				POWER_SUPPLY_PROP_FFC_CHG_TERMINATION_CURRENT, &pval);
 		if (rc < 0) {
@@ -2658,6 +2667,9 @@ static bool is_bq25970_available(struct smb_charger *chg)
 {
 	if (!chg->cp_psy)
 		chg->cp_psy = power_supply_get_by_name("bq2597x-standalone");
+
+	if (!chg->cp_psy)
+		chg->cp_psy = power_supply_get_by_name("ln8000");
 
 	if (!chg->cp_psy)
 		return false;
@@ -6605,9 +6617,13 @@ static int check_reduce_fcc_condition(struct smb_charger *chg)
 
 	if (!chg->cp_psy) {
 		chg->cp_psy = power_supply_get_by_name("bq2597x-standalone");
-		if (!chg->cp_psy)
-			pr_err("cp_psy not found\n");
-			return 0;
+		if (!chg->cp_psy){
+			chg->cp_psy = power_supply_get_by_name("ln8000");
+			if (!chg->cp_psy){
+				pr_err("cp_psy not found\n");
+				return 0;
+			}
+		}
 	}
 
 	rc = power_supply_get_property(chg->cp_psy,

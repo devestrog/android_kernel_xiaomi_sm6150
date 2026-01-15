@@ -68,9 +68,12 @@ enum pm_state {
 /* voters for usbpd */
 #define STEP_BMS_CHG_VOTER	"STEP_BMS_CHG_VOTER"
 #define BQ_TAPER_FCC_VOTER	"BQ_TAPER_FCC_VOTER"
+#define PD_UNVERIFED_VOTER  "PD_UNVERIFED_VOTER"
 
 /* defined for non_verified pps charger maxium fcc */
 #define NON_VERIFIED_PPS_FCC_MAX		3000
+#define PD_UNVERIFED_CURRENT_LOW        4300000
+#define PD_UNVERIFED_CURRENT_HIGH       5600000
 #define MAX_THERMAL_LEVEL			13
 /* jeita related */
 #ifdef CONFIG_K6_CHARGE
@@ -104,11 +107,7 @@ enum pm_state {
 #define TAPER_WITH_IBUS_HYS			60
 #define TAPER_IBUS_THR			450
 
-#ifdef CONFIG_K6_CHARGE
-#define BQ_TAPER_HYS_MV			10
-#else
 #define BQ_TAPER_HYS_MV			30
-#endif
 
 #define BQ_TAPER_DECREASE_STEP_MA			200
 
